@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: zenreply-db
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: ${DB_USER:-admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-zenreply}
+      POSTGRES_DB: ${DB_NAME:-zenreply}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${DB_USER:-admin}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:8-alpine
+    container_name: zenreply-redis
+    ports:
+      - 6379:6379
+    command: redis-server --requirepass ${REDIS_PASSWORD:-zenreply}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: ${RESTART_POLICY:-unless-stopped}
+    ports:
+      - 8080:8080
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - DATABASE_URL=postgres://${DB_USER:-admin}:${DB_PASSWORD:-zenreply}@postgres:5432/${DB_NAME:-zenreply}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-zenreply}@redis:6379
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - HMAC_SECRET=${HMAC_SECRET}
+
+volumes:
+  postgres_data:
+  redis_data:
