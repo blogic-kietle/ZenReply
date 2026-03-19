@@ -1,10 +1,10 @@
 module.exports = {
   "frontend/**/*.{js,ts,html,css,scss}": [
     "npx run lint --prefix frontend",
-    "npx prettier --write"
+    "cd frontend && npx prettier --write --plugin=prettier-plugin-tailwindcss"
   ],
   "backend/**/*.go": [
-    "gofmt -w",
-    "golangci-lint run"
+    "cd backend && gofmt -w",
+    "cd backend && golangci-lint run"
   ]
 }
