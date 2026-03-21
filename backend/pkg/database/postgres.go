@@ -1,33 +1,36 @@
+// Package database provides database connection utilities.
 package database
 
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/kietle/zenreply/config"
 )
 
-// NewPostgres creates a new PostgreSQL connection pool.
-func NewPostgres(ctx context.Context, connString string) (*pgxpool.Pool, error) {
-	pgx, err := pgxpool.ParseConfig(connString)
+// NewPostgres creates a new PostgreSQL connection pool using the provided config.
+func NewPostgres(ctx context.Context, cfg *config.PostgresConfig) (*pgxpool.Pool, error) {
+	poolCfg, err := pgxpool.ParseConfig(cfg.DSN())
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse database config: %w", err)
 	}
 
-	// Configuration
-	pgx.PingTimeout = 15 * time.Second
-	pgx.MaxConns = 25
-	pgx.MinConns = 2
-	pgx.MaxConnLifetime = 5 * time.Minute
-	pgx.MaxConnIdleTime = 30 * time.Minute
+	poolCfg.MaxConns = cfg.MaxConns
+	poolCfg.MinConns = cfg.MinConns
+	poolCfg.MaxConnLifetime = cfg.MaxConnLifetime
+	poolCfg.MaxConnIdleTime = cfg.MaxConnIdleTime
 
-	pool, err := pgxpool.NewWithConfig(ctx, pgx)
+	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create database pool: %w", err)
 	}
 
-	if err := pool.Ping(ctx); err != nil {
+	pingCtx, cancel := context.WithTimeout(ctx, cfg.PingTimeout)
+	defer cancel()
+
+	if err := pool.Ping(pingCtx); err != nil {
+		pool.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 

@@ -1,9 +1,20 @@
+# ============================================================
+# ZenReply — Docker Compose
+# Services: app, postgres, redis
+# Usage:
+#   cp .env.example .env  (fill in your values)
+#   docker compose up -d
+# ============================================================
+
 services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────
   postgres:
-    image: postgres:18-alpine
+    image: postgres:16-alpine
     container_name: zenreply-db
+    restart: ${RESTART_POLICY:-unless-stopped}
     ports:
-      - 5432:5432
+      - "${POSTGRES_PORT:-5432}:5432"
     environment:
       POSTGRES_USER: ${DB_USER:-admin}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-zenreply}
@@ -11,44 +22,91 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${DB_USER:-admin}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-admin} -d ${DB_NAME:-zenreply}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
+    networks:
+      - zenreply-net
 
+  # ── Redis ───────────────────────────────────────────────────
   redis:
-    image: redis:8-alpine
+    image: redis:7-alpine
     container_name: zenreply-redis
+    restart: ${RESTART_POLICY:-unless-stopped}
     ports:
-      - 6379:6379
-    command: redis-server --requirepass ${REDIS_PASSWORD:-zenreply}
+      - "${REDIS_PORT:-6379}:6379"
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD:-zenreply}
+      --notify-keyspace-events Ex
+      --appendonly yes
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-zenreply}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 15s
+    networks:
+      - zenreply-net
 
+  # ── Application ─────────────────────────────────────────────
   app:
     build:
       context: .
       dockerfile: Dockerfile
+      target: runner
+    container_name: zenreply-app
     restart: ${RESTART_POLICY:-unless-stopped}
     ports:
-      - 8080:8080
+      - "${APP_PORT:-8080}:8080"
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
-      - DATABASE_URL=postgres://${DB_USER:-admin}:${DB_PASSWORD:-zenreply}@postgres:5432/${DB_NAME:-zenreply}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-zenreply}@redis:6379
-      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
-      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
-      - HMAC_SECRET=${HMAC_SECRET}
+      # Application
+      APP_NAME: ZenReply
+      APP_VERSION: "1.0.0"
+      APP_ENV: ${APP_ENV:-production}
+      APP_PORT: "8080"
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:4200}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Database
+      DATABASE_URL: postgres://${DB_USER:-admin}:${DB_PASSWORD:-zenreply}@postgres:5432/${DB_NAME:-zenreply}?sslmode=disable
+      # Redis
+      REDIS_URL: redis://:${REDIS_PASSWORD:-zenreply}@redis:6379
+      # Slack
+      SLACK_CLIENT_ID: ${SLACK_CLIENT_ID}
+      SLACK_CLIENT_SECRET: ${SLACK_CLIENT_SECRET}
+      SLACK_SIGNING_SECRET: ${SLACK_SIGNING_SECRET}
+      SLACK_APP_TOKEN: ${SLACK_APP_TOKEN}
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN}
+      SLACK_REDIRECT_URL: ${SLACK_REDIRECT_URL:-http://localhost:8080/api/v1/slack/callback}
+      HMAC_SECRET: ${HMAC_SECRET}
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-24h}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - zenreply-net
 
 volumes:
   postgres_data:
+    driver: local
   redis_data:
+    driver: local
+
+networks:
+  zenreply-net:
+    driver: bridge

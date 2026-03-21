@@ -1,0 +1,988 @@
+basePath: /api/v1
+definitions:
+  github_com_kietle_zenreply_pkg_response.APIError:
+    properties:
+      code:
+        type: string
+      details:
+        type: string
+      message:
+        type: string
+    type: object
+  github_com_kietle_zenreply_pkg_response.Meta:
+    properties:
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_kietle_zenreply_pkg_response.Response:
+    properties:
+      data: {}
+      error:
+        $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.APIError'
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Meta'
+      success:
+        type: boolean
+    type: object
+  handler.HealthResponse:
+    properties:
+      database:
+        example: ok
+        type: string
+      redis:
+        example: ok
+        type: string
+      service:
+        example: ZenReply API
+        type: string
+      status:
+        example: ok
+        type: string
+      timestamp:
+        example: "2024-01-01T00:00:00Z"
+        type: string
+      version:
+        example: 1.0.0
+        type: string
+    type: object
+  handler.ListEntryRequest:
+    properties:
+      slack_user_id:
+        example: U01234567
+        type: string
+    required:
+    - slack_user_id
+    type: object
+  handler.SlackAuthCallbackResponse:
+    properties:
+      avatar:
+        example: https://avatars.slack-edge.com/...
+        type: string
+      email:
+        example: john@example.com
+        type: string
+      name:
+        example: John Doe
+        type: string
+      slack_id:
+        example: U01234567
+        type: string
+      token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      user_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    type: object
+  handler.SlackAuthURLResponse:
+    properties:
+      state:
+        example: abc123
+        type: string
+      url:
+        example: https://slack.com/oauth/v2/authorize?...
+        type: string
+    type: object
+  handler.StartSessionRequest:
+    properties:
+      reason:
+        example: Focused coding sprint
+        maxLength: 500
+        minLength: 1
+        type: string
+    required:
+    - reason
+    type: object
+  handler.UpdateSettingsRequest:
+    properties:
+      auto_reply_enabled:
+        example: true
+        type: boolean
+      cooldown_minutes:
+        example: 3
+        type: integer
+      default_message:
+        example: I am in a deep work session, will reply soon.
+        type: string
+      default_reason:
+        example: Deep Work
+        type: string
+      notify_on_resume:
+        example: false
+        type: boolean
+      reply_in_thread:
+        example: true
+        type: boolean
+    type: object
+  model.DeepWorkSession:
+    properties:
+      created_at:
+        type: string
+      end_time:
+        type: string
+      id:
+        type: string
+      is_active:
+        description: IsActive is true when the session is currently ongoing.
+        type: boolean
+      reason:
+        type: string
+      start_time:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  model.DeepWorkStatus:
+    properties:
+      is_active:
+        type: boolean
+      reason:
+        type: string
+      session_id:
+        type: string
+      started_at:
+        type: string
+      ttl_seconds:
+        description: TTL is the remaining seconds until the session auto-expires (if
+          set).
+        type: integer
+    type: object
+  model.MessageLog:
+    properties:
+      auto_reply_text:
+        type: string
+      channel_id:
+        type: string
+      created_at:
+        type: string
+      error_message:
+        type: string
+      id:
+        type: string
+      message_text:
+        type: string
+      original_ts:
+        type: string
+      sender_slack_id:
+        type: string
+      session_id:
+        type: string
+      thread_ts:
+        type: string
+      user_id:
+        type: string
+      was_sent:
+        type: boolean
+    type: object
+  model.User:
+    properties:
+      avatar_url:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      slack_name:
+        type: string
+      slack_team_id:
+        type: string
+      slack_user_id:
+        type: string
+      token_scope:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  model.UserSettings:
+    properties:
+      auto_reply_enabled:
+        type: boolean
+      blacklist:
+        description: Blacklist is a JSON array of Slack user IDs that never receive
+          auto-replies.
+        items:
+          type: string
+        type: array
+      cooldown_minutes:
+        description: CooldownMinutes is the interval (in minutes) before re-sending
+          an auto-reply to the same sender.
+        type: integer
+      created_at:
+        type: string
+      default_message:
+        type: string
+      default_reason:
+        type: string
+      id:
+        type: string
+      notify_on_resume:
+        description: NotifyOnResume controls whether to send a follow-up when the
+          user ends deep work.
+        type: boolean
+      reply_in_thread:
+        description: ReplyInThread controls whether auto-replies are sent in the original
+          message thread.
+        type: boolean
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      whitelist:
+        description: Whitelist is a JSON array of Slack user IDs that always receive
+          auto-replies.
+        items:
+          type: string
+        type: array
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@zenreply.app
+    name: ZenReply Support
+    url: https://zenreply.app/support
+  description: ZenReply is an intelligent Slack auto-reply system for deep work sessions.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: https://zenreply.app/terms
+  title: ZenReply API
+  version: 1.0.0
+paths:
+  /deep-work/sessions:
+    get:
+      description: Returns a paginated list of all deep work sessions for the authenticated
+        user
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20, max: 100)'
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.DeepWorkSession'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: List deep work sessions
+      tags:
+      - deep-work
+    post:
+      consumes:
+      - application/json
+      description: Begins a new deep work session for the authenticated user. Any
+        existing active session is ended automatically.
+      parameters:
+      - description: Session details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.StartSessionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.DeepWorkSession'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Start a deep work session
+      tags:
+      - deep-work
+  /deep-work/sessions/{id}:
+    get:
+      description: Returns details of a specific deep work session
+      parameters:
+      - description: Session UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.DeepWorkSession'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Get a specific session by ID
+      tags:
+      - deep-work
+  /deep-work/sessions/active:
+    delete:
+      description: Terminates the currently active deep work session for the authenticated
+        user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.DeepWorkSession'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: End the active deep work session
+      tags:
+      - deep-work
+  /deep-work/status:
+    get:
+      description: Returns whether the authenticated user is currently in a deep work
+        session
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.DeepWorkStatus'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Get current deep work status
+      tags:
+      - deep-work
+  /health:
+    get:
+      description: Returns the health status of the API and its dependencies
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/handler.HealthResponse'
+              type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      summary: Health check
+      tags:
+      - system
+  /logs:
+    get:
+      description: Returns a paginated list of all auto-reply messages sent by ZenReply
+        for the authenticated user
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20, max: 100)'
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.MessageLog'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: List auto-reply message logs
+      tags:
+      - logs
+  /logs/sessions/{session_id}:
+    get:
+      description: Returns all auto-reply messages sent during a specific deep work
+        session
+      parameters:
+      - description: Session UUID
+        in: path
+        name: session_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.MessageLog'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: List message logs for a specific session
+      tags:
+      - logs
+  /settings:
+    get:
+      description: Returns the authenticated user's auto-reply configuration
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.UserSettings'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Get user settings
+      tags:
+      - settings
+    put:
+      consumes:
+      - application/json
+      description: Updates the authenticated user's auto-reply configuration
+      parameters:
+      - description: Settings to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.UserSettings'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Update user settings
+      tags:
+      - settings
+  /settings/blacklist:
+    get:
+      description: Returns the list of Slack user IDs that never receive auto-replies
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+            - properties:
+                data:
+                  items:
+                    type: string
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Get blacklist
+      tags:
+      - settings
+    post:
+      consumes:
+      - application/json
+      description: Adds a Slack user ID to the blacklist. The user is also removed
+        from the whitelist if present.
+      parameters:
+      - description: Slack user ID to add
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ListEntryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Add to blacklist
+      tags:
+      - settings
+  /settings/blacklist/{slack_user_id}:
+    delete:
+      description: Removes a Slack user ID from the blacklist
+      parameters:
+      - description: Slack User ID to remove
+        in: path
+        name: slack_user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Remove from blacklist
+      tags:
+      - settings
+  /settings/reset:
+    post:
+      description: Resets all user settings to their default values
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.UserSettings'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Reset settings to defaults
+      tags:
+      - settings
+  /settings/whitelist:
+    get:
+      description: Returns the list of Slack user IDs that always receive auto-replies
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+            - properties:
+                data:
+                  items:
+                    type: string
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Get whitelist
+      tags:
+      - settings
+    post:
+      consumes:
+      - application/json
+      description: Adds a Slack user ID to the whitelist. The user is also removed
+        from the blacklist if present.
+      parameters:
+      - description: Slack user ID to add
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ListEntryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Add to whitelist
+      tags:
+      - settings
+  /settings/whitelist/{slack_user_id}:
+    delete:
+      description: Removes a Slack user ID from the whitelist
+      parameters:
+      - description: Slack User ID to remove
+        in: path
+        name: slack_user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Remove from whitelist
+      tags:
+      - settings
+  /slack/auth:
+    get:
+      description: Returns the Slack OAuth authorization URL for user login
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/handler.SlackAuthURLResponse'
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      summary: Get Slack OAuth URL
+      tags:
+      - auth
+  /slack/callback:
+    get:
+      description: Exchanges the OAuth code for tokens, upserts the user, and returns
+        a JWT
+      parameters:
+      - description: OAuth authorization code from Slack
+        in: query
+        name: code
+        required: true
+        type: string
+      - description: State token for CSRF protection
+        in: query
+        name: state
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/handler.SlackAuthCallbackResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      summary: Handle Slack OAuth callback
+      tags:
+      - auth
+  /slack/callback/redirect:
+    get:
+      description: Same as /slack/callback but redirects to the frontend with the
+        token as a query param
+      parameters:
+      - description: OAuth authorization code from Slack
+        in: query
+        name: code
+        required: true
+        type: string
+      - description: State token for CSRF protection
+        in: query
+        name: state
+        required: true
+        type: string
+      responses:
+        "302":
+          description: Found
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      summary: Handle Slack OAuth callback with redirect
+      tags:
+      - auth
+  /slack/events:
+    post:
+      consumes:
+      - application/json
+      description: Receives and processes events from the Slack Events API (webhook
+        mode). Handles URL verification and message events.
+      parameters:
+      - description: Slack request signature
+        in: header
+        name: X-Slack-Signature
+        required: true
+        type: string
+      - description: Slack request timestamp
+        in: header
+        name: X-Slack-Request-Timestamp
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      summary: Slack Events API webhook
+      tags:
+      - slack
+  /users/me:
+    delete:
+      description: Deactivates the authenticated user's account and revokes access
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Deactivate current user account
+      tags:
+      - users
+    get:
+      description: Returns the authenticated user's profile information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.User'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_kietle_zenreply_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Get current user profile
+      tags:
+      - users
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: 'Enter: Bearer <your-jwt-token>'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
