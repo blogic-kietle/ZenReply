@@ -81,14 +81,11 @@ services:
       DATABASE_URL: postgres://${DB_USER:-admin}:${DB_PASSWORD:-zenreply}@postgres:5432/${DB_NAME:-zenreply}?sslmode=disable
       # Redis
       REDIS_URL: redis://:${REDIS_PASSWORD:-zenreply}@redis:6379
-      # Slack
+      # Slack — User Token (xoxp-) architecture, no Bot/App Token needed
       SLACK_CLIENT_ID: ${SLACK_CLIENT_ID}
       SLACK_CLIENT_SECRET: ${SLACK_CLIENT_SECRET}
       SLACK_SIGNING_SECRET: ${SLACK_SIGNING_SECRET}
-      SLACK_APP_TOKEN: ${SLACK_APP_TOKEN}
-      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN}
       SLACK_REDIRECT_URL: ${SLACK_REDIRECT_URL:-http://localhost:8080/api/v1/slack/callback}
-      HMAC_SECRET: ${HMAC_SECRET}
       # JWT
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-24h}

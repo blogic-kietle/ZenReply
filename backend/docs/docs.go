@@ -1067,7 +1067,7 @@ const docTemplate = `{
         },
         "/slack/events": {
             "post": {
-                "description": "Receives and processes events from the Slack Events API (webhook mode). Handles URL verification and message events.",
+                "description": "Receives DM events from Slack and triggers auto-replies using the recipient's own User Token (xoxp-). Handles URL verification challenge automatically.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1100,12 +1100,6 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_kietle_zenreply_pkg_response.Response"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/github_com_kietle_zenreply_pkg_response.Response"
                         }
@@ -1387,7 +1381,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "is_active": {
-                    "description": "IsActive is true when the session is currently ongoing.",
                     "type": "boolean"
                 },
                 "reason": {
@@ -1420,7 +1413,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "ttl_seconds": {
-                    "description": "TTL is the remaining seconds until the session auto-expires (if set).",
                     "type": "integer"
                 }
             }
@@ -1515,7 +1507,7 @@ const docTemplate = `{
                     }
                 },
                 "cooldown_minutes": {
-                    "description": "CooldownMinutes is the interval (in minutes) before re-sending an auto-reply to the same sender.",
+                    "description": "CooldownMinutes is the interval before re-sending an auto-reply to the same sender.",
                     "type": "integer"
                 },
                 "created_at": {
@@ -1531,11 +1523,11 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "notify_on_resume": {
-                    "description": "NotifyOnResume controls whether to send a follow-up when the user ends deep work.",
+                    "description": "NotifyOnResume controls whether to notify senders when the user ends deep work.",
                     "type": "boolean"
                 },
                 "reply_in_thread": {
-                    "description": "ReplyInThread controls whether auto-replies are sent in the original message thread.",
+                    "description": "ReplyInThread controls whether auto-replies are sent as a thread reply.",
                     "type": "boolean"
                 },
                 "updated_at": {
@@ -1571,7 +1563,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/api/v1",
 	Schemes:          []string{"http", "https"},
 	Title:            "ZenReply API",
-	Description:      "ZenReply is an intelligent Slack auto-reply system for deep work sessions.",
+	Description:      "ZenReply is an intelligent Slack auto-reply system for deep work sessions. It uses the user's own Slack User Token (xoxp-) to send auto-replies — no bot installation or channel invites required.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

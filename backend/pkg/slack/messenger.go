@@ -16,7 +16,9 @@ const (
 	baseRetryDelay = 500 * time.Millisecond
 )
 
-// Messenger sends messages via the Slack API with retry logic.
+// Messenger sends messages via the Slack API using a User Token (xoxp-).
+// Messages are posted as the user themselves (MsgOptionAsUser), so recipients
+// see the message from the actual user — not a bot.
 type Messenger struct {
 	logger *slog.Logger
 }
@@ -95,6 +97,8 @@ func isNonRetryable(err error) bool {
 		"token_revoked",
 		"no_permission",
 		"missing_scope",
+		"cant_dm_bot",
+		"user_not_found",
 	}
 	for _, code := range nonRetryable {
 		if errStr == code {

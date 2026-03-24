@@ -2,7 +2,7 @@
 //
 //	@title						ZenReply API
 //	@version					1.0.0
-//	@description				ZenReply is an intelligent Slack auto-reply system for deep work sessions.
+//	@description				ZenReply is an intelligent Slack auto-reply system for deep work sessions. It uses the user's own Slack User Token (xoxp-) to send auto-replies — no bot installation or channel invites required.
 //	@termsOfService				https://zenreply.app/terms
 //
 //	@contact.name				ZenReply Support
@@ -24,7 +24,7 @@
 //	@tag.name					system
 //	@tag.description			System health and diagnostics
 //	@tag.name					auth
-//	@tag.description			Slack OAuth 2.0 authentication flow
+//	@tag.description			Slack OAuth 2.0 Sign in with Slack flow
 //	@tag.name					users
 //	@tag.description			User profile management
 //	@tag.name					deep-work
@@ -34,7 +34,7 @@
 //	@tag.name					logs
 //	@tag.description			Auto-reply message history
 //	@tag.name					slack
-//	@tag.description			Slack Events API webhook
+//	@tag.description			Slack Events API webhook (receives DM events)
 
 package main
 
@@ -62,7 +62,6 @@ import (
 func main() {
 	cfg := config.Load()
 	log := logger.New(cfg.App.LogLevel)
-
 	slog.SetDefault(log)
 
 	log.Info("starting ZenReply API",
@@ -74,7 +73,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// ── Database ─────────────────────────────────────────────────────────────
+	// ── Database ──────────────────────────────────────────────────────────────
 	db, err := database.NewPostgres(ctx, &cfg.Postgres)
 	if err != nil {
 		log.Error("failed to connect to PostgreSQL", slog.String("error", err.Error()))
@@ -105,7 +104,9 @@ func main() {
 	sessionRepo := repository.NewSessionRepository(db)
 	messageLogRepo := repository.NewMessageLogRepository(db)
 
-	// ── Slack Clients ─────────────────────────────────────────────────────────
+	// ── Slack ─────────────────────────────────────────────────────────────────
+	// Only Client ID/Secret and Signing Secret are needed.
+	// No Bot Token or App Token — ZenReply uses each user's own xoxp- token.
 	oauthSvc := slackpkg.NewOAuthService(&cfg.Slack)
 	messenger := slackpkg.NewMessenger(log)
 
@@ -114,31 +115,9 @@ func main() {
 	deepWorkService := service.NewDeepWorkService(sessionRepo, settingsRepo, userRepo, messageLogRepo, rdb, messenger, log)
 	settingsService := service.NewSettingsService(settingsRepo)
 
-	// ── HTTP Handler ──────────────────────────────────────────────────────────
+	// ── HTTP Handler & Router ─────────────────────────────────────────────────
 	h := handler.New(cfg, db, rdb, authService, deepWorkService, settingsService)
-
-	// ── Router ────────────────────────────────────────────────────────────────
 	router := route.Setup(cfg, h)
-
-	// ── Socket Mode (optional) ────────────────────────────────────────────────
-	if cfg.Slack.AppToken != "" && cfg.Slack.BotToken != "" {
-		socketClient := slackpkg.NewSocketModeClient(
-			cfg.Slack.AppToken,
-			cfg.Slack.BotToken,
-			func(ctx context.Context, ev interface{}) {
-				// Event handling is done inside the socket mode client.
-			},
-			log,
-		)
-		go func() {
-			log.Info("starting Slack Socket Mode client")
-			if err := socketClient.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
-				log.Error("socket mode client error", slog.String("error", err.Error()))
-			}
-		}()
-	} else {
-		log.Info("slack socket mode disabled (SLACK_APP_TOKEN or SLACK_BOT_TOKEN not set)")
-	}
 
 	// ── HTTP Server ───────────────────────────────────────────────────────────
 	srv := &http.Server{
@@ -149,7 +128,6 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// Start server in a goroutine.
 	go func() {
 		log.Info("HTTP server listening", slog.String("addr", srv.Addr))
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -172,6 +150,5 @@ func main() {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Error("server forced to shutdown", slog.String("error", err.Error()))
 	}
-
 	log.Info("server exited")
 }

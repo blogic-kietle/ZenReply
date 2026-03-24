@@ -56,14 +56,12 @@ type RedisConfig struct {
 }
 
 // SlackConfig holds Slack application credentials.
+// Only Client ID/Secret and Signing Secret are needed — no Bot/App tokens.
 type SlackConfig struct {
 	ClientID      string
 	ClientSecret  string
-	AppToken      string
-	BotToken      string
-	HmacSecret    string
-	RedirectURL   string
 	SigningSecret string
+	RedirectURL   string
 }
 
 // JWTConfig holds JWT signing configuration.
@@ -112,11 +110,8 @@ func Load() *Config {
 		Slack: SlackConfig{
 			ClientID:      getEnv("SLACK_CLIENT_ID", ""),
 			ClientSecret:  getEnv("SLACK_CLIENT_SECRET", ""),
-			AppToken:      getEnv("SLACK_APP_TOKEN", ""),
-			BotToken:      getEnv("SLACK_BOT_TOKEN", ""),
-			HmacSecret:    getEnv("HMAC_SECRET", ""),
-			RedirectURL:   getEnv("SLACK_REDIRECT_URL", "http://localhost:8080/api/v1/slack/callback"),
 			SigningSecret: getEnv("SLACK_SIGNING_SECRET", ""),
+			RedirectURL:   getEnv("SLACK_REDIRECT_URL", "http://localhost:8080/api/v1/slack/callback"),
 		},
 		JWT: JWTConfig{
 			Secret:     getEnv("JWT_SECRET", "change-me-in-production"),

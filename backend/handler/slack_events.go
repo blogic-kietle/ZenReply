@@ -13,7 +13,7 @@ import (
 // SlackEventsWebhook godoc
 //
 //	@Summary		Slack Events API webhook
-//	@Description	Receives and processes events from the Slack Events API (webhook mode). Handles URL verification and message events.
+//	@Description	Receives DM events from Slack and triggers auto-replies using the recipient's own User Token (xoxp-). Handles URL verification challenge automatically.
 //	@Tags			slack
 //	@Accept			json
 //	@Produce		json
@@ -21,7 +21,6 @@ import (
 //	@Param			X-Slack-Request-Timestamp	header	string	true	"Slack request timestamp"
 //	@Success		200
 //	@Failure		400	{object}	response.Response
-//	@Failure		401	{object}	response.Response
 //	@Router			/slack/events [post]
 func (h *Handler) SlackEventsWebhook(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -38,7 +37,7 @@ func (h *Handler) SlackEventsWebhook(c *gin.Context) {
 		return
 	}
 
-	// Handle Slack URL verification challenge.
+	// Respond to Slack's URL verification challenge.
 	if eventsAPIEvent.Type == slackevents.URLVerification {
 		var challengeReq slackevents.EventsAPIURLVerificationEvent
 		if err := json.Unmarshal(body, &challengeReq); err != nil {
@@ -49,31 +48,58 @@ func (h *Handler) SlackEventsWebhook(c *gin.Context) {
 		return
 	}
 
-	// Process callback events asynchronously.
+	// Process callback events asynchronously so Slack doesn't time out.
 	if eventsAPIEvent.Type == slackevents.CallbackEvent {
+		// Parse the outer callback event to access AuthedUsers.
+		var callbackEvent slackevents.EventsAPICallbackEvent
+		if err := json.Unmarshal(body, &callbackEvent); err != nil {
+			c.Status(200)
+			return
+		}
+
 		go func() {
 			switch ev := eventsAPIEvent.InnerEvent.Data.(type) {
 			case *slackevents.MessageEvent:
-				if ev.BotID != "" || ev.SubType == "bot_message" {
+				// Ignore bot messages and message edits/deletes.
+				if ev.BotID != "" || ev.SubType != "" {
 					return
 				}
-				if ev.ChannelType == "im" || ev.ChannelType == "mpim" {
-					// In webhook mode, the bot user ID is the "owner" receiving the DM.
-					// The workspace bot token is used to identify the owner.
-					// For simplicity, we pass the bot user as the owner identifier.
-					_ = h.deepWorkService.HandleIncomingMessage(
-						ctx,
-						ev.User, // In DM context, this is the sender; owner lookup is done inside the service.
-						ev.User,
-						ev.Channel,
-						ev.Text,
-						ev.TimeStamp,
-						ev.ThreadTimeStamp,
-					)
+				// Only handle Direct Messages (im) and Multi-party DMs (mpim).
+				if ev.ChannelType != "im" && ev.ChannelType != "mpim" {
+					return
 				}
+
+				// Slack populates ev.User as the SENDER.
+				// The RECEIVER (ZenReply user) is in callbackEvent.AuthedUsers.
+				ownerSlackID := getOwnerFromAuthedUsers(callbackEvent.AuthedUsers, ev.User)
+				if ownerSlackID == "" {
+					return // Cannot determine owner.
+				}
+
+				_ = h.deepWorkService.HandleIncomingMessage(
+					ctx,
+					ownerSlackID,
+					ev.User,
+					ev.Channel,
+					ev.Text,
+					ev.TimeStamp,
+					ev.ThreadTimeStamp,
+				)
 			}
 		}()
 	}
 
 	c.Status(200)
+}
+
+// getOwnerFromAuthedUsers extracts the ZenReply user's Slack ID from the authed_users list.
+// Slack includes the list of users who authorized the app in the outer callback event.
+// We pick the first authed user that is NOT the sender.
+func getOwnerFromAuthedUsers(authedUsers []string, senderID string) string {
+	for _, uid := range authedUsers {
+		if uid != senderID {
+			return uid
+		}
+	}
+	return ""
 }
